@@ -54,7 +54,38 @@ class ChessBoard:
         :param prev_y: 移动前点的y坐标
         :return: True或False
         '''
-        # TODO 1:请在这里补全判断当前移动是否合法的的代码
+        # 移动点超出棋盘范围
+        if x < 0 or x >= self.size or y < 0 or y >= self.size:
+            return False
+        # 移动点是障碍物
+        if (x, y) in self.obstacles:
+            return False
+        # 不允许不动
+        if (x, y) == (prev_x, prev_y):
+            return False
+        # 已有己方棋子的地方不能下棋（R方）
+        if self.board[x][y] == 'R':
+            return False
+
+        # 当马跨越对角线的同侧长边相邻位置，检查是否有己方或敌方棋子
+        diff_x = abs(x - prev_x)
+        diff_y = abs(y - prev_y)
+        if diff_x == 2 and diff_y == 1:
+            if x - prev_x == 2:
+                if (prev_x + 1, prev_y) in self.obstacles or self.board[prev_x + 1][prev_y] != ' ':
+                    return False
+            else:
+                if (prev_x - 1, prev_y) in self.obstacles or self.board[prev_x - 1][prev_y] != ' ':
+                    return False
+        elif diff_x == 1 and diff_y == 2:
+            if y - prev_y == 2:
+                if (prev_x, prev_y + 1) in self.obstacles or self.board[prev_x][prev_y + 1] != ' ':
+                    return False
+            else:
+                if (prev_x, prev_y - 1) in self.obstacles or self.board[prev_x][prev_y - 1] != ' ':
+                    return False
+
+        return True
 
     def is_goal_reached(self, x, y):
         '''
@@ -124,8 +155,36 @@ class ChessBoard:
                 self.board[x][y] = 'B'
 
     def solve(self):
-        # TODO 2: 请你在此处补全搜索算法
-        pass
+        '''
+        使用广度优先搜索算法解决棋盘问题
+        :return: None
+        '''
+        if not self.start or not self.end:
+            print("起始点或终止点未设置")
+            return
+
+        self.search_time = 0
+        visited = set()
+        q = queue.Queue()
+        q.put((self.start, []))
+
+        while not q.empty():
+            self.search_time += 1
+            (x, y), path = q.get()
+            if self.is_goal_reached(x, y):
+                print("跳跃步数：", len(path) + 1)
+                print("跳跃路径：", path + [(x, y)])
+                print("查找次数：", self.search_time)
+                return
+
+            if (x, y) in visited:
+                continue
+            visited.add((x, y))
+
+            for next_x, next_y in self.get_possible_moves(x, y):
+                q.put(((next_x, next_y), path + [(x, y)]))
+
+        print("未找到路径，目标不可达")
 
 
 # 示例用法
