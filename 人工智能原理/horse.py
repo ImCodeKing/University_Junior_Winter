@@ -57,14 +57,11 @@ class ChessBoard:
         # 移动点超出棋盘范围
         if x < 0 or x >= self.size or y < 0 or y >= self.size:
             return False
-        # 移动点是障碍物
-        if (x, y) in self.obstacles:
+        # 已有己方棋子的地方不能下棋（B方）
+        if self.board[x][y] == 'B':
             return False
         # 不允许不动
         if (x, y) == (prev_x, prev_y):
-            return False
-        # 已有己方棋子的地方不能下棋（R方）
-        if self.board[x][y] == 'R':
             return False
 
         # 当马跨越对角线的同侧长边相邻位置，检查是否有己方或敌方棋子
@@ -72,17 +69,17 @@ class ChessBoard:
         diff_y = abs(y - prev_y)
         if diff_x == 2 and diff_y == 1:
             if x - prev_x == 2:
-                if (prev_x + 1, prev_y) in self.obstacles or self.board[prev_x + 1][prev_y] != ' ':
+                if self.board[prev_x + 1][prev_y] != ' ':
                     return False
             else:
-                if (prev_x - 1, prev_y) in self.obstacles or self.board[prev_x - 1][prev_y] != ' ':
+                if self.board[prev_x - 1][prev_y] != ' ':
                     return False
         elif diff_x == 1 and diff_y == 2:
             if y - prev_y == 2:
-                if (prev_x, prev_y + 1) in self.obstacles or self.board[prev_x][prev_y + 1] != ' ':
+                if self.board[prev_x][prev_y + 1] != ' ':
                     return False
             else:
-                if (prev_x, prev_y - 1) in self.obstacles or self.board[prev_x][prev_y - 1] != ' ':
+                if self.board[prev_x][prev_y - 1] != ' ':
                     return False
 
         return True
@@ -169,10 +166,9 @@ class ChessBoard:
         q.put((self.start, []))
 
         while not q.empty():
-            self.search_time += 1
             (x, y), path = q.get()
             if self.is_goal_reached(x, y):
-                print("跳跃步数：", len(path) + 1)
+                print("跳跃步数：", len(path))
                 print("跳跃路径：", path + [(x, y)])
                 print("查找次数：", self.search_time)
                 return
@@ -180,8 +176,11 @@ class ChessBoard:
             if (x, y) in visited:
                 continue
             visited.add((x, y))
+            self.search_time += 1
 
             for next_x, next_y in self.get_possible_moves(x, y):
+                if (next_x, next_y) in visited:
+                    continue
                 q.put(((next_x, next_y), path + [(x, y)]))
 
         print("未找到路径，目标不可达")
@@ -189,7 +188,7 @@ class ChessBoard:
 
 # 示例用法
 if __name__ == "__main__":
-    size = 8
+    size = 100
     # 实例化一个大小为size的棋盘
     chessboard = ChessBoard(size=size)
     # 设置初始点为(0,0)
