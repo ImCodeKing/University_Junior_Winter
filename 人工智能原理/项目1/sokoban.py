@@ -191,6 +191,109 @@ class BoxGame:
         # print self.hint
 
 
+import heapq
+
+# 定义游戏状态类
+class State:
+    def __init__(self, level, player_pos, box_pos):
+        self.level = level
+        self.player_pos = player_pos
+        self.box_pos = box_pos
+        self.g = 0  # 从起始状态到当前状态的实际代价
+        self.h = 0  # 启发式评估函数的值
+        self.parent = None  # 父状态，用于回溯路径
+
+    # 定义状态的比较方法，用于优先队列的排序
+    def __lt__(self, other):
+        return (self.g + self.h) < (other.g + other.h)
+
+# 定义启发式评估函数，这里使用曼哈顿距离
+def heuristic(state, goal_pos):
+    total_distance = 0
+    for box, goal in zip(state.box_pos, goal_pos):
+        total_distance += abs(box[0] - goal[0]) + abs(box[1] - goal[1])
+    return total_distance
+
+# 将地图状态转换为游戏状态
+def map_to_game_state(level):
+    player_pos = None
+    box_pos = []
+    goal_pos = []
+    for j in range(len(level)):
+        for i in range(len(level[j])):
+            if level[j][i] == '@':
+                player_pos = (i, j)
+            elif level[j][i] == '$':
+                box_pos.append((i, j))
+            elif level[j][i] == '.':
+                goal_pos.append((i, j))
+    return player_pos, box_pos, goal_pos
+
+# 定义A*搜索函数
+def astar_search(level, start_player_pos, start_box_pos, goal_pos):
+    open_list = []  # 优先队列，存放待探索的状态
+    closed_set = set()  # 存放已探索过的状态
+
+    start_state = State(level, start_player_pos, start_box_pos)
+    heapq.heappush(open_list, start_state)
+
+    while open_list:
+        current_state = heapq.heappop(open_list)
+
+        if current_state.box_pos == goal_pos:
+            # 找到了目标状态，回溯路径并返回
+            path = []
+            while current_state:
+                path.append(current_state)
+                current_state = current_state.parent
+            return path[::-1]
+
+        closed_set.add(current_state)
+
+        # 展开当前状态的相邻状态
+        for move in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            new_box_pos = []
+            for box in current_state.box_pos:
+                new_player_pos = (box[0] + move[0], box[1] + move[1])
+                new_box_pos.append(new_player_pos)
+
+            if any(new_box == current_state.player_pos for new_box in new_box_pos):
+                # 玩家试图推箱子到当前箱子的位置，不合法的移动
+                continue
+
+            new_level = [list(row) for row in current_state.level]  # 复制地图状态
+            for i, box in enumerate(current_state.box_pos):
+                new_level[box[1]][box[0]] = '-'  # 清除原箱子位置
+                new_level[new_box_pos[i][1]][new_box_pos[i][0]] = '$'  # 更新新箱子位置
+
+            new_state = State(new_level, current_state.player_pos, new_box_pos)
+            new_state.g = current_state.g + 1
+            new_state.h = heuristic(new_state, goal_pos)
+            new_state.parent = current_state
+
+            if new_state not in closed_set:
+                heapq.heappush(open_list, new_state)
+
+    # 如果搜索失败，返回空路径
+    return []
+
+def search(level):
+    # 示例用法
+    # level = [
+    #     '----#####--------------#---#--------------#$--#------------###--$##-----------#--$-$-#---------###-#-##-#---#######---#-##-#####--..##-$--$----------..######-###-#@##--..#----#-----#########----#######--------'
+    # ]
+
+    start_player_pos, start_box_pos, goal_pos = map_to_game_state(level)
+    path = astar_search(level, start_player_pos, start_box_pos, goal_pos)
+    if path:
+        for state in path:
+            print("Player Position:", state.player_pos, "Box Positions:", state.box_pos)
+    else:
+        print("No solution found.")
+
+
+
+
 def main():
     # start pygame
     pygame.init()
@@ -220,6 +323,7 @@ def main():
 
     # main game loop
     while True:
+        search(boxer.level)
         clock.tick(60)
 
         if boxer.auto == 0:
