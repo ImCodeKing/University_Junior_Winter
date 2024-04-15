@@ -1,8 +1,5 @@
-import time
-
 import pygame, sys, os
 from pygame.locals import *
-import heapq
 
 from collections import deque
 
@@ -84,19 +81,12 @@ def b_manto_2(level, width, b, m, t):
 
 class BoxGame:
     def __init__(self):
-        # self.level = list(
-        #     '----#####--------------#---#--------------#$--#------------###--$##-----------#--$-$-#---------###-#-##-#---#######---#-##-#####--..##-$--$----------..######-###-#@##--..#----#-----#########----#######--------')
-
         self.level = list(
-            '----#####--------------#---#--------------#---#------------###---##-----------#--$---#---------###-#-##-#---#######---#-##-#####---.##-$--$-----------.######-###-#@##---.#----#-----#########----#######--------')
-
-        # self.level = list(
-        #     '----#####--------------#---#--------------#---#------------###---##-----------#--$---#---------###-#-##-#---#######---#-##-#####---.##-----------------######-###-#@##----#----#-----#########----#######--------')
+            '----#####--------------#---#--------------#$--#------------###--$##-----------#--$-$-#---------###-#-##-#---#######---#-##-#####--..##-$--$----------..######-###-#@##--..#----#-----#########----#######--------')
         self.w = 19
         self.h = 11
         self.man = 163
         self.hint = list(self.level)
-        self.box_count = self.level.count('$')
         self.solution = []
         self.push = 0
         self.todo = []
@@ -157,16 +147,55 @@ class BoxGame:
                 self.solution += d.upper()
                 self.push += 1
 
+    def automove(self):
+        if self.auto == 1 and self.todo.__len__() > 0:
+            self._move(self.todo[-1].lower())
+            self.todo.pop()
+        else:
+            self.auto = 0
+
+    def boxhint(self, x, y):
+        d4 = [-1, -self.w, 1, self.w]
+        m4 = ['l', 'u', 'r', 'd']
+        b = y * self.w + x
+        maze = list(self.level)
+        to_floor(maze, b)
+        to_floor(maze, self.man)
+        mark = maze * 4
+        size = self.w * self.h
+        self.queue = []
+        head = 0
+        for i in range(4):
+            if b_manto(maze, self.w, b, self.man, b + d4[i]):
+                if len(self.queue) == 0:
+                    self.queue.append((b, i, -1))
+                mark[i * size + b] = '1'
+        # print self.queue
+        while head < len(self.queue):
+            pos = self.queue[head]
+            head += 1
+            # print pos
+            for i in range(4):
+                if mark[pos[0] + i * size] == '1' and maze[pos[0] - d4[i]] in ['-', '.']:
+                    # print i
+                    if mark[pos[0] - d4[i] + i * size] != '1':
+                        self.queue.append((pos[0] - d4[i], i, head - 1))
+                        for j in range(4):
+                            if b_manto(maze, self.w, pos[0] - d4[i], pos[0], pos[0] - d4[i] + d4[j]):
+                                mark[j * size + pos[0] - d4[i]] = '1'
+        for i in range(size):
+            self.hint[i] = '0'
+            for j in range(4):
+                if mark[j * size + i] == '1':
+                    self.hint[i] = '1'
+        # print self.hint
 
     def bfs_search(self):
         visited = set()  # 用于记录已访问过的状态
         queue = deque([(self.level[:], self.man, '')])  # 初始状态加入队列
         directions = {'l': -1, 'u': -self.w, 'r': 1, 'd': self.w}  # 移动方向对应的偏移量
-        # count = 0
 
         while queue:
-            # print(count)
-            # count += 1
             level, man, path = queue.popleft()  # 取出队列中的状态
             state = (tuple(level), man)  # 将状态转换为不可变的对象，方便存入集合
 
@@ -176,7 +205,7 @@ class BoxGame:
             visited.add(state)  # 将状态标记为已访问
 
             # 检查是否达到目标状态
-            if level.count('*') == self.box_count:
+            if all(box in ('.', '*') for box in level):
                 return path  # 返回移动路径
 
             # 扩展当前状态
@@ -199,65 +228,120 @@ class BoxGame:
 
         return None  # 如果搜索失败，则返回空值
 
-    def find_goals(self):
-        goals = []
-        for i, char in enumerate(self.level):
-            if char == '.':
-                goals.append((i % self.w, i // self.w))  # 将目标位置的坐标添加到列表中
-        return goals
 
-    def heuristic(self, level):
-        # 计算所有箱子到目标位置的曼哈顿距离之和作为启发函数值
-        total_distance = 0
-        goals = self.find_goals()  # 获取所有目标位置的坐标
-        for i, char in enumerate(level):
-            if char == '$':
-                box_x, box_y = i % self.w, i // self.w  # 计算箱子的坐标
-                # 计算箱子到所有目标位置的曼哈顿距离，并取最小值
-                min_distance = min(abs(box_x - goal[0]) + abs(box_y - goal[1]) for goal in goals)
-                total_distance += min_distance
-        return total_distance
+import heapq
 
-    def astar_search(self):
-        visited = set()  # 用于记录已访问过的状态
-        open_list = [(self.heuristic(self.level), self.level[:], self.man, '')]  # 初始状态加入开放列表
-        directions = {'l': -1, 'u': -self.w, 'r': 1, 'd': self.w}  # 移动方向对应的偏移量
-        count = 0
+# 定义游戏状态类
+class State:
+    def __init__(self, level, player_pos, box_pos):
+        self.level = level
+        self.player_pos = player_pos
+        self.box_pos = box_pos
+        self.g = 0  # 从起始状态到当前状态的实际代价
+        self.h = 0  # 启发式评估函数的值
+        self.parent = None  # 父状态，用于回溯路径
 
-        while open_list:
-            print(count)
-            count += 1
-            _, level, man, path = heapq.heappop(open_list)  # 从开放列表中取出启发值最小的状态
-            state = (tuple(level), man)  # 将状态转换为不可变的对象，方便存入集合
+    # 定义状态的比较方法，用于优先队列的排序
+    def __lt__(self, other):
+        return (self.g + self.h) < (other.g + other.h)
 
-            if state in visited:  # 如果状态已经访问过，则跳过
-                continue
 
-            visited.add(state)  # 将状态标记为已访问
+# 定义启发式评估函数，这里使用曼哈顿距离
+def heuristic(state, goal_pos):
+    total_distance = 0
+    for box, goal in zip(state.box_pos, goal_pos):
+        total_distance += abs(box[0] - goal[0]) + abs(box[1] - goal[1])
+    return total_distance
 
-            # 检查是否达到目标状态
-            if level.count('*') == self.box_count:
-                return path  # 返回移动路径
 
-            # 扩展当前状态
-            for direction, offset in directions.items():
-                new_man = man + offset  # 计算移动后的人物位置
-                if level[new_man] in ('-', '.'):  # 如果移动到空地上
-                    new_level = level[:]
-                    new_level[man] = '-' if level[man] != '+' else '.'  # 更新人物所在位置
-                    new_level[new_man] = '@' if level[new_man] != '.' else '+'  # 更新新位置
-                    heapq.heappush(open_list, (len(path) + 1 + self.heuristic(new_level), new_level, new_man, path + direction))  # 将新状态加入开放列表
+# 将地图状态转换为游戏状态
+def map_to_game_state(boxer):
+    player_pos = None
+    box_pos = []
+    goal_pos = []
+    for i in range(boxer.w):
+        for j in range(boxer.h):
+            if boxer.level[j * boxer.w + i] == '@':
+                player_pos = (j, i)
+            elif boxer.level[j * boxer.w + i] == '$':
+                box_pos.append((j, i))
+            elif boxer.level[j * boxer.w + i] == '.':
+                goal_pos.append((j, i))
+    return player_pos, box_pos, goal_pos
 
-                elif level[new_man] in ('$', '*'):  # 如果移动到箱子位置
-                    new_box = new_man + offset  # 计算箱子推动后的位置
-                    if level[new_box] in ('-', '.'):  # 如果箱子推动到空地上
-                        new_level = level[:]
-                        new_level[man] = '-' if level[man] != '+' else '.'  # 更新人物所在位置
-                        new_level[new_man] = '@' if level[new_man] != '.' else '+'  # 更新人物推动后的位置
-                        new_level[new_box] = '$' if level[new_box] != '.' else '*'  # 更新箱子推动后的位置
-                        heapq.heappush(open_list, (len(path) + 1 + self.heuristic(new_level), new_level, new_man, path + direction.upper()))  # 将新状态加入开放列表
 
-        return None  # 如果搜索失败，则返回空值
+# def get_valid_move(current_state, boxer):
+#     move_list = []
+#
+#     # 展开当前状态的相邻状态
+#     for move in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+#         new_player_pos = (current_state.player_pos[0] + move[0], current_state.player_pos[1] + move[1])
+#         if not (0 <= new_player_pos[0] < boxer.w and 0 <= new_player_pos[1] < boxer.h):
+#             continue
+#
+#         if boxer.level[new_player_pos[0] * boxer.w + new_player_pos[1]] == "#":
+#             continue
+#
+#         for box in current_state.box_pos:
+#             if new_player_pos[0] == box[0] and new_player_pos[1] == box[1]:
+#                 continue
+
+
+
+# 定义A*搜索函数
+# def astar_search(boxer, start_player_pos, start_box_pos, goal_pos):
+#     level = boxer.level
+#     open_list = []  # 优先队列，存放待探索的状态
+#     closed_set = set()  # 存放已探索过的状态
+#
+#     start_state = State(level, start_player_pos, start_box_pos)
+#     heapq.heappush(open_list, start_state)
+#
+#     while open_list:
+#         current_state = heapq.heappop(open_list)
+#         print(current_state.box_pos)
+#         print('-------------------------------')
+#
+#         if current_state.box_pos == goal_pos:
+#             # 找到了目标状态，回溯路径并返回
+#             path = []
+#             while current_state:
+#                 path.append(current_state)
+#                 current_state = current_state.parent
+#             return path[::-1]
+#
+#         closed_set.add(current_state)
+#
+#
+#
+#             if any(new_box == current_state.player_pos for new_box in new_box_pos):
+#                 # 玩家试图推箱子到当前箱子的位置，不合法的移动
+#                 continue
+#
+#             new_level = [list(row) for row in current_state.level]  # 复制地图状态
+#             for i, box in enumerate(current_state.box_pos):
+#                 new_level[boxer.h * box[0] + box[1]] = '-'  # 清除原箱子位置
+#                 new_level[boxer.h * new_box_pos[i][0] + new_box_pos[i][1]] = '$'  # 更新新箱子位置
+#
+#             new_state = State(new_level, current_state.player_pos, new_box_pos)
+#             new_state.g = current_state.g + 1
+#             new_state.h = heuristic(new_state, goal_pos)
+#             new_state.parent = current_state
+#
+#             if new_state not in closed_set:
+#                 heapq.heappush(open_list, new_state)
+#
+#     # 如果搜索失败，返回空路径
+#     return []
+
+def search(boxer):
+    start_player_pos, start_box_pos, goal_pos = map_to_game_state(boxer)
+    path = astar_search(boxer, start_player_pos, start_box_pos, goal_pos)
+    if path:
+        for state in path:
+            print("Player Position:", state.player_pos, "Box Positions:", state.box_pos)
+    else:
+        print("No solution found.")
 
 
 def main():
@@ -274,6 +358,8 @@ def main():
         raise SystemExit(msg)
     skin = skin.convert()
 
+    # print skin.get_at((0,0))
+    # screen.fill((255,255,255))
     screen.fill(skin.get_at((0, 0)))
     pygame.display.set_caption('BoxGame.py')
 
@@ -285,19 +371,7 @@ def main():
     clock = pygame.time.Clock()
     pygame.key.set_repeat(200, 50)
 
-    # path = boxer.bfs_search()
-    path = boxer.astar_search()
-    print(path)
-
-    for mv in path:
-        clock.tick(60)
-
-        boxer.move(mv)
-        boxer.draw(screen, skin)
-
-        pygame.display.update()
-        pygame.display.set_caption(boxer.solution.__len__().__str__() + '/' + boxer.push.__str__() + ' - boxer.py')
-        time.sleep(0.2)
+    # search(boxer)
 
     # main game loop
     while True:
@@ -327,7 +401,7 @@ def main():
             boxer.draw(screen, skin)
 
         pygame.display.update()
-        pygame.display.set_caption(boxer.solution.__len__().__str__() + '/' + boxer.push.__str__() + ' - boxer.py')
+        pygame.display.set_caption(boxer.solution.__len__().__str__() + '/' + boxer.push.__str__() + ' - sokoban.py')
 
 
 if __name__ == '__main__':
