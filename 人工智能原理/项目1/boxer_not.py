@@ -6,51 +6,28 @@ import heapq
 
 from collections import deque
 
+import random
 
-def to_box(level, i, ori_idx, box_count):
-    if level[i] == '-' or level[i] == '@':
-        if level[ori_idx].isdigit():
-            level[i] = level[ori_idx]
-        elif not 0 <= ord(level[i]) - ord('A') < box_count:
-            box = (ord(level[ori_idx]) - ord('A') - box_count) % 10
-            level[i] = str(box)
-        else:
-            level[i] = '$'
+
+def to_box(level, index):
+    if level[index] == '-' or level[index] == '@':
+        level[index] = '$'
     else:
-        if 0 <= ord(level[i]) - ord('A') < box_count:
-            if ord(level[ori_idx]) - ord('A') < box_count:
-                if not (str(ord(level[i]) - ord('A')) == level[ori_idx]):
-                    # 10 * 目标编号 + 箱子编号 + box_count（防止冲突）
-                    level[i] = chr((box_count + int(level[ori_idx]) + 10 * (ord(level[i]) - ord('A'))) + ord('A'))
-            else:
-                box = (ord(level[ori_idx]) - ord('A') - box_count) % 10
-                if not (ord(level[i]) - ord('A') == box):
-                    level[i] = chr((box_count + box + 10 * (ord(level[i]) - ord('A'))) + ord('A'))
-        else:
-            level[i] = '*'
+        level[index] = '*'
 
 
-def to_man(level, i, box_count):
-    if level[i] == '-' or level[i] == '$' or (level[i].isdigit() and 0 <= int(level[i]) < box_count):
+def to_man(level, i):
+    if level[i] == '-' or level[i] == '$':
         level[i] = '@'
     else:
-        if 0 <= ord(level[i]) - ord('A') < box_count:
-            level[i] = chr(ord(level[i]) - ord('A') + ord('a'))
-        elif ord(level[i]) - box_count - ord('A') >= 0:
-            tar = (ord(level[i]) - ord('A') - box_count) // 10
-            level[i] = chr(tar + ord('a'))
-        else:
-            level[i] = '+'
+        level[i] = '+'
 
 
-def to_floor(level, i, box_count):
+def to_floor(level, i):
     if level[i] == '@' or level[i] == '$':
         level[i] = '-'
     else:
-        if 0 <= ord(level[i]) - ord('a') < box_count:
-            level[i] = chr(ord(level[i]) - ord('a') + ord('A'))
-        else:
-            level[i] = '.'
+        level[i] = '.'
 
 
 def to_offset(d, width):
@@ -106,73 +83,25 @@ def b_manto_2(level, width, b, m, t):
 
     return []
 
+map_list = ['------------------------############-------####---#####-------####---#####-------##@$---#####-------####.#######-------#########---------------------------------------------------------------------------------',
+            '----#####--------------#---#--------------#$--#------------###--$##-----------#------#---------###-#-##-#---#######---#$##-#####---.##----------------.######-###-#@##---.#----#-----#########----#######--------',
+            '####################----#---#---#----##--$.#---#-@-#----##----#---#---#----#####-#---------.--##-----------------##----#---------#-.##--###------##-#####--$-#-------$----##----#-----####################-------']
 
-def trans_mix(box, tar):
-    if box == '0' and tar == 'A':
-        return 'D'
-    elif box == '0' and tar == 'B':
-        return 'E'
-    elif box == '0' and tar == 'C':
-        return 'F'
-    elif box == '1' and tar == 'A':
-        return 'G'
-    elif box == '1' and tar == 'B':
-        return 'H'
-    elif box == '1' and tar == 'C':
-        return 'I'
-    elif box == '2' and tar == 'A':
-        return 'J'
-    elif box == '2' and tar == 'B':
-        return 'K'
-    elif box == '2' and tar == 'C':
-        return 'L'
-
-
-def get_ori(char):
-    #    |A B C
-    # ---|------
-    # 0  |D E F
-    # 1  |G H I
-    # 2  |J K L
-    if char == 'D':
-        return '0', 'A'
-    elif char == 'E':
-        return '0', 'B'
-    elif char == 'F':
-        return '0', 'C'
-    elif char == 'G':
-        return '1', 'A'
-    elif char == 'H':
-        return '1', 'B'
-    elif char == 'I':
-        return '1', 'C'
-    elif char == 'J':
-        return '2', 'A'
-    elif char == 'K':
-        return '2', 'B'
-    elif char == 'L':
-        return '2', 'C'
-
+man_list = [77, 163, 49]
 
 class BoxGame:
     def __init__(self):
-        # self.level = list(
-        #     '----#####--------------#---#--------------#$--#------------###--$##-----------#--$-$-#---------###-#-##-#---#######---#-##-#####--..##-$--$----------..######-###-#@##--..#----#-----#########----#######--------')
-
-        # self.level = list(
-        #     '----#####--------------#---#--------------#---#------------###---##-----------#--$---#---------###-#-##-#---#######---#-##-#####---.##-$--$-----------.######-###-#@##---.#----#-----#########----#######--------')
+        random_map_num = random.randint(0, 2)
+        self.level = list(map_list[random_map_num])
 
         # self.level = list(
         #     '----#####--------------#---#--------------#---#------------###---##-----------#--$---#---------###-#-##-#---#######---#-##-#####---.##-----------------######-###-#@##----#----#-----#########----#######--------')
 
-        self.level = list(
-            '----#####--------------#---#--------------#---#------------###---##-----------#------#---------###-#-##-#---#######---#-##-#####---C##-1--2----------B-######-###-#@##--0A#----#-----#########----#######--------')
-
         self.w = 19
         self.h = 11
-        self.man = 163
+        self.man = man_list[random_map_num]
         self.hint = list(self.level)
-        self.box_count = 3  # self.level.count('$')
+        self.box_count = self.level.count('$')
         self.solution = []
         self.push = 0
         self.todo = []
@@ -207,43 +136,6 @@ class BoxGame:
                 elif self.level[j * self.w + i] == '*':
                     screen.blit(skin, (i * w, j * w), (2 * w, w, w, w))
 
-                else:
-                    if self.level[j * self.w + i].isdigit():
-                        screen.blit(skin, (i * w, j * w), (2 * w, 0, w, w))
-                        font = pygame.font.Font(None, 40)
-                        text = font.render(self.level[j * self.w + i], True, (0, 0, 0))  # 将标号转换为文本
-                        text_rect = text.get_rect(center=(i * w + w // 2, j * w + w // 2))  # 文本显示在箱子中心位置
-                        screen.blit(text, text_rect)
-
-                    elif ord(self.level[j * self.w + i]) - ord('A') >= self.box_count and ord(self.level[j * self.w + i]) - ord('a') < 0:
-                        box = (ord(self.level[j * self.w + i]) - ord('A') - self.box_count) % 10
-                        tar = (ord(self.level[j * self.w + i]) - ord('A') - self.box_count) // 10
-
-                        screen.blit(skin, (i * w, j * w), (2 * w, 0, w, w))
-                        font = pygame.font.Font(None, 25)
-
-                        text_box = font.render(str(box), True, (0, 0, 0))  # 将标号转换为文本
-                        text_rect_box = text_box.get_rect(center=(i * w + w // 1.2, j * w + w // 2))  # 文本显示在箱子中心位置
-                        screen.blit(text_box, text_rect_box)
-
-                        text_tar = font.render(str(tar), True, (0, 0, 255))  # 将标号转换为文本
-                        text_rect_tar = text_tar.get_rect(center=(i * w + w // 4, j * w + w // 2))  # 文本显示在箱子中心位置
-                        screen.blit(text_tar, text_rect_tar)
-
-                    else:
-                        if 0 <= ord(self.level[j * self.w + i]) - ord('A') < self.box_count:
-                            screen.blit(skin, (i * w, j * w), (0, w, w, w))
-                            font = pygame.font.Font(None, 25)
-                            text = font.render(str(ord(self.level[j * self.w + i]) - ord('A')), True, (0, 0, 0))  # 将标号转换为文本
-                            text_rect = text.get_rect(center=(i * w + w // 2, j * w + w // 2))  # 文本显示在箱子中心位置
-                            screen.blit(text, text_rect)
-                        else:
-                            screen.blit(skin, (i * w, j * w), (w, 0, w, w))
-                            font = pygame.font.Font(None, 25)
-                            text = font.render(str(ord(self.level[j * self.w + i]) - ord('a')), True, (0, 0, 0))  # 将标号转换为文本
-                            text_rect = text.get_rect(center=(i * w + w // 2, j * w + w // 2))  # 文本显示在箱子中心位置
-                            screen.blit(text, text_rect)
-
                 if self.sbox != 0 and self.hint[j * self.w + i] == '1':
                     screen.blit(skin, (i * w + offset, j * w + offset), (3 * w, 3 * w, 4, 4))
 
@@ -255,18 +147,18 @@ class BoxGame:
         self.sbox = 0
         h = to_offset(d, self.w)
         h2 = 2 * h
-        if self.level[self.man + h] == '-' or self.level[self.man + h] == '.' or 0 <= ord(self.level[self.man + h]) - ord('A') < self.box_count:
+        if self.level[self.man + h] == '-' or self.level[self.man + h] == '.':
             # move
-            to_man(self.level, self.man + h, self.box_count)
-            to_floor(self.level, self.man, self.box_count)
+            to_man(self.level, self.man + h)
+            to_floor(self.level, self.man)
             self.man += h
             self.solution += d
-        elif self.level[self.man + h] == '*' or self.level[self.man + h] == '$' or self.level[self.man + h].isdigit() or ord(self.level[self.man + h]) - ord('A') >= self.box_count:
-            if self.level[self.man + h2] == '-' or self.level[self.man + h2] == '.' or 0 <= ord(self.level[self.man + h2]) - ord('A') < self.box_count:
+        elif self.level[self.man + h] == '*' or self.level[self.man + h] == '$' or self.level[self.man + h].isdigit():
+            if self.level[self.man + h2] == '-' or self.level[self.man + h2] == '.':
                 # push
-                to_box(self.level, self.man + h2, self.man + h, self.box_count)
-                to_man(self.level, self.man + h, self.box_count)
-                to_floor(self.level, self.man, self.box_count)
+                to_box(self.level, self.man + h2)
+                to_man(self.level, self.man + h)
+                to_floor(self.level, self.man)
                 self.man += h
                 self.solution += d.upper()
                 self.push += 1
@@ -276,11 +168,8 @@ class BoxGame:
         visited = set()  # 用于记录已访问过的状态
         queue = deque([(self.level[:], self.man, '')])  # 初始状态加入队列
         directions = {'l': -1, 'u': -self.w, 'r': 1, 'd': self.w}  # 移动方向对应的偏移量
-        # count = 0
 
         while queue:
-            # print(count)
-            # count += 1
             level, man, path = queue.popleft()  # 取出队列中的状态
             state = (tuple(level), man)  # 将状态转换为不可变的对象，方便存入集合
 
@@ -312,78 +201,6 @@ class BoxGame:
                         queue.append((new_level, new_man, path + direction.upper()))  # 将新状态加入队列
 
         return None  # 如果搜索失败，则返回空值
-
-    def bfs_search_one2one(self):
-        visited = set()  # 用于记录已访问过的状态
-        queue = deque([(self.level[:], self.man, '')])  # 初始状态加入队列
-        directions = {'l': -1, 'u': -self.w, 'r': 1, 'd': self.w}  # 移动方向对应的偏移量
-        count = 0
-
-        while queue:
-            print(count)
-            count += 1
-            level, man, path = queue.popleft()  # 取出队列中的状态
-            state = (tuple(level), man)  # 将状态转换为不可变的对象，方便存入集合
-
-            if state in visited:  # 如果状态已经访问过，则跳过
-                continue
-
-            visited.add(state)  # 将状态标记为已访问
-
-            # 检查是否达到目标状态
-            if self.done_check(level):
-                return path  # 返回移动路径
-
-            # 扩展当前状态
-            for direction, offset in directions.items():
-                new_man = man + offset  # 计算移动后的人物位置
-                if level[new_man] in ('-', 'A', 'B', 'C'):  # 如果移动到空地上
-                    new_level = level[:]
-                    new_level[man] = '-' if level[man] not in ('a', 'b', 'c') else chr(ord(level[man]) - ord('a') + ord('A'))  # 更新人物所在位置
-                    new_level[new_man] = '@' if level[man] not in ('A', 'B', 'C') else chr(ord(level[man]) - ord('A') + ord('a'))  # 更新新位置
-                    queue.append((new_level, new_man, path + direction))  # 将新状态加入队列
-
-                elif level[new_man] in ('0', '1', '2', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'k', 'L'):  # 如果移动到箱子位置
-                    new_box = new_man + offset  # 计算箱子推动后的位置
-                    if level[new_box] in ('-', 'A', 'B', 'C'):  # 如果箱子推动到空地上
-                        new_level = level[:]
-                        if level[man] not in ('a', 'b', 'c'):
-                            new_level[man] = '-'   # 更新人物所在位置
-                        else:
-                            new_level[man] = chr(ord(level[man]) - ord('a') + ord('A'))
-
-                        if level[new_man] not in ('D', 'E', 'F', 'G', 'H', 'I', 'J', 'k', 'L'):
-                            new_level[new_man] = '@'   # 更新人物推动后的位置
-                        else:
-                            _, tar = get_ori(level[new_man])
-                            new_level[new_man] = chr(ord(tar) - ord('A') + ord('a'))
-
-                        if level[new_box] not in ('A', 'B', 'C'):
-                            if level[new_man] not in ('D', 'E', 'F', 'G', 'H', 'I', 'J', 'k', 'L'):
-                                new_level[new_box] = level[new_man]  # 更新箱子推动后的位置
-                            else:
-                                box, _ = get_ori(level[new_man])
-                                new_level[new_box] = box
-                        else:
-                            if level[new_man] not in ('D', 'E', 'F', 'G', 'H', 'I', 'J', 'k', 'L'):
-                                if level[new_man] != str(ord(level[new_box]) - ord('A')):
-                                    new_level[new_box] = trans_mix(level[new_man], level[new_box])
-                            else:
-                                box, _ = get_ori(level[new_man])
-                                if box != str(ord(level[new_box]) - ord('A')):
-                                    new_level[new_box] = trans_mix(box, level[new_box])
-
-                        queue.append((new_level, new_man, path + direction.upper()))  # 将新状态加入队列
-
-        return None  # 如果搜索失败，则返回空值
-
-
-    def done_check(self, level):
-        target_characters = {'0', '1', '2', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'}
-        for char in level:
-            if char in target_characters:
-                return False
-        return True
 
     def find_goals(self):
         goals = []
@@ -472,9 +289,11 @@ def main():
     pygame.key.set_repeat(200, 50)
 
     # path = boxer.bfs_search()
-    # path = boxer.astar_search()
-    # path = boxer.bfs_search_one2one()
-    path = 'ulllllLuuulldddRRRRRRRRRRRdrRlUllllllllllllulldRRRRRRRRRRRRRRluRR'
+    path = boxer.astar_search()
+    # 1280727
+    # 6441394
+    # path = 'ullluuullldDuulldddrRRRRRRRRRRRRlllllllluuulluurDluulDDDDDuulldddrRRRRRRRRRRRdrUlllllllluuuLLulDDDuulldddrRRRRRRRRRRRuRDldR'
+    # path = 'dddllllllldlldddrruLdlUUUluRRRuulluRdrddRRRRRRRRRRdddLLLLdlUUUUluRRRRRRdRRurD'
     print(path)
 
     for mv in path:
