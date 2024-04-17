@@ -1,5 +1,3 @@
-import time
-
 import pygame, sys, os
 from pygame.locals import *
 import heapq
@@ -131,8 +129,13 @@ map_list = ['------------------------############-------####---#####-------####-
             '####################----#---#---#----##--$.#---#-@-#----##----#---#---#----#####-#---------.--##-----------------##----#---------#-.##--###------##-#####--$-#-------$----##----#-----####################-------',
             '----#####--------------#---#--------------#---#------------###---##-----------#------#---------###-#-##-#---#######---#-##-#####---C##-1--2----------B-######-###-#@##--0A#----#-----#########----#######--------']
 
+
 man_list = [83, 163, 49, 163]
 
+path_list = ['RRurrdLulD',
+             'ullluuullldDuulldddrRRRRRRRRRRRRlllllllluuulluurDluulDDDDDuulldddrRRRRRRRRRRRdrUlllllllluuuLLulDDDuulldddrRRRRRRRRRRRuRDldR',
+             'dddllllllldlldddrruLdlUUUluRRRuulluRdrddRRRRRRRRRRdddLLLLdlUUUUluRRRRRRdRRurD',
+             'ulllllLuuulldddRRRRRRRRRRRdrRlUllllllllllllulldRRRRRRRRRRRRRRluRR']
 
 class BoxGame:
     def __init__(self, mode):
@@ -517,26 +520,7 @@ def choose_mode(screen, clock):
         if mode_selected:
             return mode_selected - 1
 
-        clock.tick(30)
-
-
-def wait_screen(screen, clock, boxer, mode):
-    font = pygame.font.Font(None, 36)
-
-    while True:
-        screen.fill((255, 255, 255))
-        text = font.render("Searching， it may take several minutes, please wait!", True, (0, 0, 0))
-        text_rect = text.get_rect(center=(200, 100))
-        screen.blit(text, text_rect)
-
-        pygame.display.flip()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        clock.tick(30)
+        clock.tick(60)
 
 
 def main():
@@ -548,10 +532,9 @@ def main():
     pygame.key.set_repeat(200, 50)
 
     mode = choose_mode(screen, clock)
-    print(mode)
 
     # load skin
-    skinfilename = os.path.join('borgar.png')
+    skinfilename = os.path.join('skin.png')
     try:
         skin = pygame.image.load(skinfilename)
     except pygame.error as msg:
@@ -566,24 +549,19 @@ def main():
     boxer = BoxGame(mode) if mode < 3 else BoxGame121(mode)
     boxer.draw(screen, skin)
 
-    # path = wait_screen(screen, clock, boxer, mode)
-    # path = boxer.bfs_search()
-    path = boxer.astar_search() if mode < 3 else boxer.bfs_search_one2one()
-    # path = boxer.bfs_search_one2one()
-    # path = 'ullluuullldDuulldddrRRRRRRRRRRRRlllllllluuulluurDluulDDDDDuulldddrRRRRRRRRRRRdrUlllllllluuuLLulDDDuulldddrRRRRRRRRRRRuRDldR'
-    # path = 'dddllllllldlldddrruLdlUUUluRRRuulluRdrddRRRRRRRRRRdddLLLLdlUUUUluRRRRRRdRRurD'
-    # path = 'ulllllLuuulldddRRRRRRRRRRRdrRlUllllllllllllulldRRRRRRRRRRRRRRluRR'
-    print(path)
+    # path = boxer.astar_search() if mode < 3 else boxer.bfs_search_one2one()
+    # print(path)
+    path = path_list[mode]
+
 
     for mv in path:
-        clock.tick(60)
+        clock.tick(5)
 
         boxer.move(mv)
         boxer.draw(screen, skin)
 
         pygame.display.update()
-        pygame.display.set_caption(boxer.solution.__len__().__str__() + '/' + boxer.push.__str__() + ' - boxer.py')
-        time.sleep(0.2)
+        # time.sleep(0.2)
 
     # main game loop
     while True:
@@ -608,9 +586,6 @@ def main():
                     elif event.key == K_DOWN:
                         boxer.move('d')
                         boxer.draw(screen, skin)
-        else:
-            boxer.automove()
-            boxer.draw(screen, skin)
 
         pygame.display.update()
         pygame.display.set_caption(boxer.solution.__len__().__str__() + '/' + boxer.push.__str__() + ' - boxer.py')
