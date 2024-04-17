@@ -553,7 +553,6 @@ def main():
     # print(path)
     path = path_list[mode]
 
-
     for mv in path:
         clock.tick(5)
 
@@ -561,7 +560,6 @@ def main():
         boxer.draw(screen, skin)
 
         pygame.display.update()
-        # time.sleep(0.2)
 
     # main game loop
     while True:
