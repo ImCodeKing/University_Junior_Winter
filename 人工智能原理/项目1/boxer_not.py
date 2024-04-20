@@ -93,14 +93,16 @@ class BoxGame:
     def __init__(self):
         random_map_num = random.randint(0, 2)
         random_map_num = 0
-        self.level = list(map_list[random_map_num])
+        # self.level = list(map_list[random_map_num])
+        self.level = list('###########################---################-@-################-$$#################.-.-###############----#####################################################################################################')
 
         # self.level = list(
         #     '----#####--------------#---#--------------#---#------------###---##-----------#--$---#---------###-#-##-#---#######---#-##-#####---.##-----------------######-###-#@##----#----#-----#########----#######--------')
 
         self.w = 19
         self.h = 11
-        self.man = man_list[random_map_num]
+        # self.man = man_list[random_map_num]
+        self.man = 47
         self.hint = list(self.level)
         self.box_count = self.level.count('$')
         self.solution = []
@@ -270,7 +272,7 @@ def main():
     screen = pygame.display.set_mode((400, 300))
 
     # load skin
-    skinfilename = os.path.join('borgar.png')
+    skinfilename = os.path.join('skin.png')
     try:
         skin = pygame.image.load(skinfilename)
     except pygame.error as msg:
@@ -289,8 +291,8 @@ def main():
     clock = pygame.time.Clock()
     pygame.key.set_repeat(200, 50)
 
-    # path = boxer.bfs_search()
-    path = boxer.astar_search()
+    path = boxer.bfs_search()
+    # path = boxer.astar_search()
     # 1280727
     # 6441394
     # path = 'ullluuullldDuulldddrRRRRRRRRRRRRlllllllluuulluurDluulDDDDDuulldddrRRRRRRRRRRRdrUlllllllluuuLLulDDDuulldddrRRRRRRRRRRRuRDldR'
