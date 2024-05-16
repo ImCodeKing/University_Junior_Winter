@@ -58,7 +58,7 @@ plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.05])
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
-plt.title('1-Receiver Operating Characteristic (ROC)')
+plt.title('Receiver Operating Characteristic (ROC)')
 plt.legend(loc="lower right")
 plt.show()
 
@@ -78,12 +78,10 @@ softmax_regression = LogisticRegression(multi_class='multinomial', solver='sag')
 
 # Fit the model on the training data and labels
 softmax_regression.fit(train_X_flat, train_number)
-print("aaaaaaaaaaaaaaaaa")
 
 # Make predictions on the test set
 test_number_predictions = softmax_regression.predict(test_X_flat)
 test_number_predictions_proba = softmax_regression.predict_proba(test_X_flat)
-print(test_number_predictions)
 
 # 计算准确率
 accuracy = accuracy_score(test_number, test_number_predictions)
@@ -96,10 +94,6 @@ recall = recall_score(test_number, test_number_predictions, average='macro')
 
 # 计算F1-score
 f1 = f1_score(test_number, test_number_predictions, average='macro')
-print("准确率 (Accuracy): {:.2f}".format(accuracy))
-print("精确率 (Precision): {:.2f}".format(precision))
-print("召回率 (Recall): {:.2f}".format(recall))
-print("F1-score: {:.2f}".format(f1))
 
 # 计算auROC
 au_roc = roc_auc_score(test_number, test_number_predictions_proba, multi_class='ovr')
@@ -111,6 +105,6 @@ print("精确率 (Precision): {:.2f}".format(precision))
 print("召回率 (Recall): {:.2f}".format(recall))
 print("F1-score: {:.2f}".format(f1))
 print("auROC: {:.2f}".format(au_roc))
-print("confusion_matrix: ", cm)
+print("confusion_matrix: \n", cm)
 
 
