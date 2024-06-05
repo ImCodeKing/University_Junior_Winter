@@ -8,10 +8,68 @@ else:
     import tkinter as tk
     from tkinter import PhotoImage
 
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+from collections import deque
+import random
+from tqdm import tqdm
+
 
 UNIT = 100   # 迷宫中每个格子的像素大小
 MAZE_H = 6  # 迷宫的高度（格子数）
 MAZE_W = 6  # 迷宫的宽度（格子数）
+
+
+class DQN(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(state_dim, 24)
+        self.fc2 = nn.Linear(24, 24)
+        self.fc3 = nn.Linear(24, action_dim)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
+
+
+class ReplayBuffer:
+    def __init__(self, max_size):
+        self.buffer = deque(maxlen=max_size)
+
+    def add(self, experience):
+        self.buffer.append(experience)
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    def size(self):
+        return len(self.buffer)
+
+
+def train_dqn(model, optimizer, criterion, replay_buffer, batch_size, gamma):
+    if replay_buffer.size() < batch_size:
+        return
+
+    batch = replay_buffer.sample(batch_size)
+    states, actions, rewards, next_states, dones = zip(*batch)
+
+    states = torch.tensor(states, dtype=torch.float32)
+    actions = torch.tensor(actions, dtype=torch.int64).unsqueeze(1)
+    rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1)
+    next_states = torch.tensor(next_states, dtype=torch.float32)
+    dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1)
+
+    current_q_values = model(states).gather(1, actions)
+    max_next_q_values = model(next_states).max(1)[0].unsqueeze(1)
+    expected_q_values = rewards + (gamma * max_next_q_values * (1 - dones))
+
+    loss = criterion(current_q_values, expected_q_values)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
 
 
 class Maze(tk.Tk, object):
@@ -86,11 +144,11 @@ class Maze(tk.Tk, object):
         if s_ == self.canvas.coords(self.Candy):
             reward = 1
             done = True
-            s_ = 'terminal'
+            s_ = [-100.0, -100.0]
         elif s_ in [self.canvas.coords(self.stone1), self.canvas.coords(self.stone2),self.canvas.coords(self.stone3),self.canvas.coords(self.stone4)]:
             reward = -1
             done = True
-            s_ = 'terminal'
+            s_ = [-100.0, -100.0]
         else:
             reward = 0
             done = False
@@ -103,15 +161,49 @@ class Maze(tk.Tk, object):
 
 
 def update():
-    # 更新图形化界面
-    for t in range(10):
-        s = env.reset()
-        while True:
-            env.render()
-            a = 1
-            s, r, done = env.step(a)
-            if done:
-                break
+    state_dim = 2
+    action_dim = env.n_actions
+
+    model = DQN(state_dim, action_dim)
+    optimizer = optim.Adam(model.parameters())
+    criterion = nn.MSELoss()
+    replay_buffer = ReplayBuffer(10000)
+
+    batch_size = 64
+    gamma = 0.99
+    episodes = 500
+    epsilon_decay = 0.995
+    min_epsilon = 0.01
+    epsilon = 1.0
+    max_steps = 50
+
+    for episode in tqdm(range(episodes), desc="Training Episodes"):
+        state = env.reset()
+        done = False
+        total_reward = 0
+
+        with tqdm(range(max_steps), desc="Env Steps", leave=False) as pbar:
+            for step in pbar:
+                env.render()
+                if done:
+                    break
+
+                if random.random() < epsilon:
+                    action = random.randint(0, env.n_actions - 1)
+                else:
+                    with torch.no_grad():
+                        action = model(torch.tensor(state, dtype=torch.float32)).argmax().item()
+
+                next_state, reward, done = env.step(action)
+                replay_buffer.add((state, action, reward, next_state, done))
+                state = next_state
+                total_reward += reward
+
+                train_dqn(model, optimizer, criterion, replay_buffer, batch_size, gamma)
+
+            epsilon = max(min_epsilon, epsilon * epsilon_decay)
+            tqdm.write(f"Episode {episode}, Total Reward: {total_reward}, Epsilon: {epsilon}")
+
 
 if __name__ == '__main__':
     env = Maze()
