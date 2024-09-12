@@ -226,6 +226,7 @@ def update():
     target_update = 200  # 目标网络的参数的更新频率
     batch_size = 32
     min_size = 200  # 经验池超过200后再训练
+
     loss = np.inf
     renew = False
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
