@@ -219,7 +219,9 @@ def update():
     lr = 2e-3
     gamma = 0.9
 
-    epsilon = 0.9
+    initial_epsilon = 0.1
+    final_epsilon = 0.9
+    epsilon_increment = 0.005
 
     target_update = 200  # 目标网络的参数的更新频率
     batch_size = 32
@@ -229,7 +231,7 @@ def update():
     device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
     replay_buffer = ReplayBuffer(capacity)
-    agent = DQN(n_states=n_states, n_hidden=n_hidden, n_actions=n_actions, learning_rate=lr, gamma=gamma, epsilon=epsilon,
+    agent = DQN(n_states=n_states, n_hidden=n_hidden, n_actions=n_actions, learning_rate=lr, gamma=gamma, epsilon=initial_epsilon,
                 target_update=target_update, device=device)
 
     for episode in tqdm(range(episodes), desc="Training Episodes"):
@@ -265,7 +267,10 @@ def update():
                     if renew:
                         renew_record = True
 
-            tqdm.write(f"Episode {episode}, Total Reward: {total_reward}, Loss: {loss}, Renew: {renew_record}")
+            tqdm.write(f"Episode {episode}, Total Reward: {total_reward}, Loss: {loss}, Renew: {renew_record}, Epsilon: {agent.epsilon}")
+        agent.epsilon = min(final_epsilon, agent.epsilon + epsilon_increment)
+
+    torch.save(agent.eval_net.state_dict(), 'dqn_eval_net.pth')
 
 
 if __name__ == '__main__':
